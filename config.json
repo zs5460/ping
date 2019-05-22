@@ -1,0 +1,8 @@
+{
+    "MailServer": "smtp.qq.com",
+    "MailSender": "noreply@qq.cn",
+    "MailSenderPwd": "",
+    "MailReciver":["zs5460@gmail.com"],
+
+    "ipList":["1.1.1.1","1.2.4.8","1.2.3.4"]
+}
