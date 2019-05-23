@@ -1,0 +1,9 @@
+{
+    "MailSubject": "monitor report",
+	"MailServer": "smtp.xxx.com:25",
+    "MailSender": "noreply@xxx.cn",
+    "MailSenderPwd": "xxx",
+    "MailReciver":"xxx@xxx.com",
+
+    "ipList":["1.1.1.1","1.2.4.8","1.2.3.4"]
+}
