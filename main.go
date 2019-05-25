@@ -7,12 +7,14 @@ import (
 	"log"
 	"net/smtp"
 	"strings"
-	"sync"
+	"time"
 
 	"github.com/paulstuart/ping"
 )
 
-var cfg *Config
+var (
+	cfg = Config{}
+)
 
 // Config ...
 type Config struct {
@@ -24,18 +26,109 @@ type Config struct {
 	IPList        []string
 }
 
-// ReadConfig returns config
-func ReadConfig() *Config {
-	jsb, err := ioutil.ReadFile("./config.json")
-	if err != nil {
-		log.Fatal("read config.json error.")
+// Host ...
+type Host struct {
+	IP              string
+	Online          bool
+	OnlineReported  bool
+	OfflineReported bool
+	IsRestore       bool
+	Count           int
+	Interval        time.Duration
+	LastOnlineTime  time.Time
+	RestoreTime     time.Time
+	OfflineTime     time.Time
+	OfflineTimes    int
+	OfflineDuration time.Duration
+}
+
+// Watch ...
+func (h *Host) Watch() {
+	for {
+		if ping.Ping(h.IP, 2) {
+			// offline => online
+			if !h.Online {
+				h.Count = 0
+				h.IsRestore = true
+				h.RestoreTime = time.Now()
+				h.Online = true
+				h.OfflineReported = false
+				h.OfflineDuration += time.Since(h.OfflineTime)
+			}
+			h.Count++
+			h.Interval = 1 * time.Second
+
+			if h.IsRestore {
+				if time.Since(h.OfflineTime) > 60*time.Second {
+					if h.Count > 10 {
+						if !h.OnlineReported {
+							h.OnlineReport()
+						}
+					}
+				}
+			}
+			h.LastOnlineTime = time.Now()
+		} else {
+			// online => offline
+			if h.Online {
+				h.Count = 0
+				h.Online = false
+				h.IsRestore = false
+				h.OnlineReported = false
+				h.OfflineTime = time.Now()
+				h.OfflineTimes++
+			}
+			h.Count++
+			h.Interval = 10 * time.Second
+			if h.Count > 3 {
+				if !h.OfflineReported {
+					h.OfflineReport()
+				}
+			}
+		}
+		time.Sleep(h.Interval)
 	}
-	var config Config
-	err = json.Unmarshal(jsb, &config)
-	if err != nil {
-		log.Fatal("Unmarshal config.json error.")
+}
+
+// OfflineReport ...
+func (h *Host) OfflineReport() {
+	msg := fmt.Sprintf("Host %s offline at %s",
+		h.IP,
+		h.OfflineTime.Format("2006-01-02 15:04:05"))
+	err := SendReport(msg)
+	if err == nil {
+		h.OfflineReported = true
+	} else {
+		log.Println(err)
 	}
-	return &config
+}
+
+// OnlineReport ...
+func (h *Host) OnlineReport() {
+	msg := fmt.Sprintf("Host %s offline at %s,restore online at %s,offline %d times,total %s.",
+		h.IP,
+		h.OfflineTime.Format("2006-01-02 15:04:05"),
+		h.RestoreTime.Format("2006-01-02 15:04:05"),
+		h.OfflineTimes,
+		h.OfflineDuration)
+	err := SendReport(msg)
+	if err == nil {
+		h.OnlineReported = true
+	} else {
+		log.Println(err)
+	}
+}
+
+// LoadConfig ...
+func LoadConfig(fn string, v interface{}) {
+	jsonData, err := ioutil.ReadFile(fn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = json.Unmarshal(jsonData, v)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // SendMail ...
@@ -60,36 +153,24 @@ func SendReport(msg string) error {
 		cfg.MailSubject, msg)
 }
 
-// PingHost ...
-func PingHost(ip string) {
-	if ping.Ping(ip, 2) {
-		fmt.Printf("ping %s success!\n", ip)
-	} else {
-		fmt.Printf("ping %s timeout!\n", ip)
-		//log to file
-
-		// send mail
-		err := SendReport(ip)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-}
-
 func main() {
-
-	cfg = ReadConfig()
-	fmt.Printf("%#v\n", cfg)
+	LoadConfig("./config.json", &cfg)
+	//log.Printf("%#v\n",cfg)
 
 	iplist := cfg.IPList
-	var wg sync.WaitGroup
+	log.Println("service start...")
 	for _, ip := range iplist {
-		wg.Add(1)
-		go func(ip string) {
-			defer wg.Done()
-			PingHost(ip)
-		}(ip)
-
+		h := &Host{
+			IP:             ip,
+			Online:         true,
+			Interval:       1 * time.Second,
+			LastOnlineTime: time.Now(),
+			OfflineTime:    time.Now(),
+		}
+		go h.Watch()
 	}
-	wg.Wait()
+
+	done := make(chan struct{})
+	<-done
+
 }
