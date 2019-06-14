@@ -1,29 +1,23 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"net/smtp"
-	"strings"
 	"time"
+
+	"github.com/zs5460/mail"
+	"github.com/zs5460/my"
 
 	"github.com/paulstuart/ping"
 )
 
 var (
-	cfg = Config{}
+	cfg = config{}
 )
 
-// Config ...
-type Config struct {
-	MailSubject   string
-	MailServer    string
-	MailSender    string
-	MailSenderPwd string
-	MailReciver   string
-	IPList        []string
+type config struct {
+	mail.Config
+	IPList []string
 }
 
 // Host ...
@@ -119,33 +113,9 @@ func (h *Host) OnlineReport() {
 	}
 }
 
-// LoadConfig ...
-func LoadConfig(fn string, v interface{}) {
-	jsonData, err := ioutil.ReadFile(fn)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = json.Unmarshal(jsonData, v)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-// SendMail ...
-func SendMail(user, password, host, to, subject, body string) error {
-	hp := strings.Split(host, ":")
-	auth := smtp.PlainAuth("", user, password, hp[0])
-	contentType := "Content-Type: text/html; charset=UTF-8"
-	msg := []byte("To: " + to + "\r\nFrom: " + user +
-		"\r\nSubject: " + subject + "\r\n" + contentType + "\r\n\r\n" + body)
-	sendTo := strings.Split(to, ";")
-	err := smtp.SendMail(host, auth, user, sendTo, msg)
-	return err
-}
-
 // SendReport ...
 func SendReport(msg string) error {
-	return SendMail(
+	return mail.SendMail(
 		cfg.MailSender,
 		cfg.MailSenderPwd,
 		cfg.MailServer,
@@ -154,8 +124,7 @@ func SendReport(msg string) error {
 }
 
 func main() {
-	LoadConfig("./config.json", &cfg)
-	//log.Printf("%#v\n",cfg)
+	my.MustLoadConfig("./config.json", &cfg)
 
 	iplist := cfg.IPList
 	log.Println("service start...")

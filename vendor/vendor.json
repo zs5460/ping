@@ -1,0 +1,25 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "RBGGqMtk44WRaild/B68Zpf2nzc=",
+			"path": "github.com/paulstuart/ping",
+			"revision": "0345a9703e43995c48c1749fda54272132d57324",
+			"revisionTime": "2014-09-25T21:23:52Z"
+		},
+		{
+			"checksumSHA1": "sLpTuhOF29lwtL9rIeMywdba3tw=",
+			"path": "github.com/zs5460/mail",
+			"revision": "40f29611860ce47172d91ab59594cd1c90c45672",
+			"revisionTime": "2019-06-13T09:32:20Z"
+		},
+		{
+			"checksumSHA1": "5zUEyyXa6ZOzvXBXlKFv1q/Fa0c=",
+			"path": "github.com/zs5460/my",
+			"revision": "080841f415395ac405e24da45b229fd897fc048c",
+			"revisionTime": "2019-05-31T09:29:54Z"
+		}
+	],
+	"rootPath": "github.com/zs5460/ping"
+}
